@@ -1,86 +1,42 @@
 package main
 
 import (
-	"context"
-	"fmt"
-
 	"os"
+
+	"github.com/FranciscoOrtizCastillo/go-react-project/config"
+	"github.com/FranciscoOrtizCastillo/go-react-project/db"
+	"github.com/FranciscoOrtizCastillo/go-react-project/routers"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/FranciscoOrtizCastillo/go-react-project/models"
 )
 
 func main() {
 
-	port := os.Getenv("PORT")
-	mongodb := os.Getenv("MONGODB_URI")
+	config.Config()
 
-	if port == "" {
-		port = "3000"
-	}
-
-	if mongodb == "" {
-		mongodb = "mongodb://localhost:27017/gomongodb"
+	// Connect to database
+	if err := db.Connect(); err != nil {
+		panic(err)
 	}
 
 	app := fiber.New()
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI("mongodb+srv://fazt:faztpassword@cluster0.ynu6g.mongodb.net/?retryWrites=true&w=majority"))
-
-	if err != nil {
-		panic(err)
-	}
 
 	app.Use(cors.New())
 
 	app.Static("/", "./client/dist")
 
-	app.Post("/users", func(c *fiber.Ctx) error {
-		var user models.User
+	routers.SetupRoutes(app)
 
-		c.BodyParser(&user)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
 
-		coll := client.Database("gomongodb").Collection("users")
-		result, err := coll.InsertOne(context.TODO(), bson.D{{
-			Key:   "name",
-			Value: user.Name,
-		}})
+	//fmt.Println("Server on port " + port)
+	err := app.Listen(":" + port)
 
-		if err != nil {
-			panic(err)
-		}
-
-		return c.JSON(&fiber.Map{
-			"data": result,
-		})
-	})
-
-	app.Get("/users", func(c *fiber.Ctx) error {
-		var users []models.User
-
-		coll := client.Database("gomongodb").Collection("users")
-		results, error := coll.Find(context.TODO(), bson.M{})
-
-		if error != nil {
-			panic(error)
-		}
-
-		for results.Next(context.TODO()) {
-			var user models.User
-			results.Decode(&user)
-			users = append(users, user)
-		}
-
-		return c.JSON(&fiber.Map{
-			"users": users,
-		})
-
-	})
-
-	app.Listen(":" + port)
-	fmt.Println("Server on port 3000")
+	if err != nil {
+		panic(err)
+	}
 }
