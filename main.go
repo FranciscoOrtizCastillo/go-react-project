@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/faztweb/go-react-crud/models"
+	"github.com/FranciscoOrtizCastillo/go-react-project/models"
 )
 
 func main() {
